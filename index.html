@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔤 Word Memory Clicker</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d1117;--panel:#161b22;--card:#21262d;--border:rgba(48,54,61,1);
+  --accent:#58a6ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;
+  --orange:#db6d28;--purple:#bc8cff;--text:#e6edf3;--muted:#8b949e;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;overflow:hidden;}
+canvas#bg{position:fixed;inset:0;pointer-events:none;z-index:0;}
+
+.overlay{position:fixed;inset:0;background:rgba(1,4,9,0.9);z-index:200;
+  display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
+.box{background:var(--panel);border:1px solid var(--border);border-radius:20px;
+  padding:36px 32px;max-width:360px;width:92%;text-align:center;
+  box-shadow:0 16px 64px rgba(0,0,0,0.6);}
+.box h1{font-family:'Fredoka One',cursive;font-size:2rem;color:var(--accent);margin-bottom:6px;}
+.box .sub{font-size:0.82rem;color:var(--muted);line-height:1.8;margin-bottom:22px;}
+
+.diff-btns{display:flex;flex-direction:column;gap:10px;}
+.diff-btn{padding:14px 20px;border:1px solid var(--border);border-radius:12px;
+  background:var(--card);color:var(--text);font-family:'Fredoka One',cursive;
+  font-size:1rem;letter-spacing:1px;cursor:pointer;transition:all 0.18s;
+  display:flex;align-items:center;justify-content:space-between;}
+.diff-btn:hover{border-color:var(--accent);background:#1c2733;transform:translateX(4px);}
+.diff-btn.lv1:hover{border-color:var(--green);}
+.diff-btn.lv2:hover{border-color:var(--yellow);}
+.diff-btn.lv3:hover{border-color:var(--red);}
+.diff-badge{font-size:0.7rem;padding:3px 10px;border-radius:20px;
+  font-family:'Noto Sans KR',sans-serif;font-weight:700;}
+.lv1 .diff-badge{background:rgba(63,185,80,0.15);color:var(--green);}
+.lv2 .diff-badge{background:rgba(210,153,34,0.15);color:var(--yellow);}
+.lv3 .diff-badge{background:rgba(248,81,73,0.15);color:var(--red);}
+
+.result-list{text-align:left;margin:16px 0;display:flex;flex-direction:column;gap:6px;}
+.r-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
+  background:var(--card);font-size:0.85rem;}
+.r-item.ok{border-left:3px solid var(--green);}
+.r-item.bad{border-left:3px solid var(--red);}
+.r-word{font-family:'Fredoka One',cursive;font-size:1rem;flex:1;}
+.r-tag{font-size:0.7rem;color:var(--muted);}
+
+.big-btn{width:100%;padding:14px;border:none;border-radius:12px;
+  font-family:'Fredoka One',cursive;font-size:1.05rem;letter-spacing:2px;
+  cursor:pointer;transition:all 0.18s;margin-top:6px;}
+.big-btn.blue{background:linear-gradient(135deg,#1f6feb,#388bfd);color:#fff;
+  box-shadow:0 4px 18px rgba(31,111,235,0.3);}
+.big-btn.green{background:linear-gradient(135deg,#238636,#2ea043);color:#fff;
+  box-shadow:0 4px 18px rgba(35,134,54,0.3);}
+.big-btn:hover{transform:translateY(-2px);filter:brightness(1.1);}
+.big-btn:disabled{opacity:0.35;cursor:not-allowed;transform:none;filter:none;}
+
+.wrap{position:relative;z-index:1;width:100%;max-width:480px;padding:14px;
+  display:flex;flex-direction:column;gap:12px;}
+
+.top-bar{display:flex;align-items:center;justify-content:space-between;
+  background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:10px 16px;}
+.top-label{font-size:0.72rem;color:var(--muted);margin-bottom:2px;}
+.top-val{font-family:'Fredoka One',cursive;font-size:1.1rem;}
+.timer-col{text-align:center;}
+.timer-big{font-family:'Fredoka One',cursive;font-size:2.2rem;line-height:1;transition:color 0.3s;}
+.timer-big.warn{color:var(--yellow);}
+.timer-big.urgent{color:var(--red);animation:pulse 0.4s infinite alternate;}
+@keyframes pulse{to{transform:scale(1.08);}}
+.tbar-bg{width:80px;height:5px;background:var(--card);border-radius:3px;overflow:hidden;margin:4px auto 0;}
+.tbar{height:100%;border-radius:3px;transition:width 0.9s linear,background 0.5s;}
+
+.word-card{background:var(--panel);border:1px solid var(--border);border-radius:20px;
+  padding:24px 18px 18px;display:flex;flex-direction:column;align-items:center;gap:14px;
+  min-height:200px;justify-content:center;position:relative;transition:border-color 0.3s,box-shadow 0.3s;}
+.word-card.state-reveal{border-color:var(--accent);box-shadow:0 0 24px rgba(88,166,255,0.12);}
+.word-card.state-vanish{border-color:var(--orange);box-shadow:0 0 24px rgba(219,109,40,0.15);}
+.word-card.state-done{border-color:var(--green);box-shadow:0 0 24px rgba(63,185,80,0.15);}
+
+.w-emoji{font-size:3.5rem;line-height:1;}
+.w-hint{font-size:0.72rem;color:var(--muted);letter-spacing:1px;}
+
+.letters-row{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;}
+.lbox{width:34px;height:38px;border-radius:8px;border:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;
+  font-size:1.1rem;color:transparent;background:var(--card);transition:all 0.12s;}
+.lbox.lit{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,0.1);
+  box-shadow:0 0 6px rgba(88,166,255,0.25);animation:popIn 0.15s ease-out;}
+.lbox.done{border-color:var(--green);color:var(--green);background:rgba(63,185,80,0.1);}
+.lbox.hidden{border-color:var(--orange);color:transparent;background:rgba(219,109,40,0.08);}
+@keyframes popIn{0%{transform:scale(0.65)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+.vbar-bg{width:100%;height:4px;background:var(--card);border-radius:2px;overflow:hidden;}
+.vbar{height:100%;border-radius:2px;background:var(--orange);}
+
+.status-text{font-family:'Fredoka One',cursive;font-size:0.88rem;color:var(--muted);
+  letter-spacing:1px;min-height:1.2em;}
+
+.click-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.click-btn{width:130px;height:130px;border-radius:50%;border:none;font-size:3rem;
+  cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;
+  position:relative;overflow:hidden;transition:transform 0.08s;
+  background:radial-gradient(circle at 35% 35%,#6ec6ff,#1f6feb 45%,#0d4aa0 80%);
+  box-shadow:0 0 0 5px rgba(31,111,235,0.12),0 8px 32px rgba(31,111,235,0.3),
+    inset 0 -3px 6px rgba(0,0,0,0.3),inset 0 3px 6px rgba(255,255,255,0.25);}
+.click-btn::before{content:'';position:absolute;top:10%;left:18%;width:30%;height:20%;
+  background:radial-gradient(ellipse,rgba(255,255,255,0.45),transparent);
+  border-radius:50%;transform:rotate(-30deg);}
+.click-btn:active{transform:scale(0.88);}
+.click-btn:disabled{opacity:0.3;cursor:not-allowed;}
+.click-lbl{font-family:'Fredoka One',cursive;font-size:0.68rem;color:var(--muted);letter-spacing:2px;}
+
+.ans-section{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px;}
+.ans-title{font-size:0.68rem;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;}
+.ans-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.ans-num{font-family:'Fredoka One',cursive;font-size:0.85rem;color:var(--muted);min-width:18px;}
+.ans-emoji{font-size:1.1rem;min-width:26px;text-align:center;}
+.ans-input{flex:1;background:var(--card);border:1px solid var(--border);border-radius:9px;
+  padding:8px 11px;color:var(--text);font-family:'Fredoka One',cursive;font-size:0.95rem;
+  letter-spacing:1px;outline:none;transition:border-color 0.2s;}
+.ans-input:focus{border-color:var(--accent);}
+.ans-input.ok{border-color:var(--green);color:var(--green);}
+.ans-input.wrong{border-color:var(--red);color:var(--red);}
+
+.float-letter{position:fixed;font-family:'Fredoka One',cursive;font-size:1.5rem;
+  color:var(--accent);pointer-events:none;z-index:999;animation:flyUp 0.8s ease-out forwards;}
+@keyframes flyUp{0%{transform:translateY(0) scale(1);opacity:1;}100%{transform:translateY(-90px) scale(1.3);opacity:0;}}
+
+.round-dots{display:flex;gap:6px;justify-content:center;}
+.rdot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.3s;}
+.rdot.done{background:var(--green);}
+.rdot.curr{background:var(--accent);box-shadow:0 0 6px rgba(88,166,255,0.5);}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<div class="overlay" id="ov-start">
+  <div class="box">
+    <div style="font-size:3rem;margin-bottom:10px">🧠</div>
+    <h1>Word Memory</h1>
+    <p class="sub">
+      클릭할 때마다 알파벳 <b style="color:var(--accent)">한 글자씩</b> 나타나요.<br>
+      모든 글자가 나오면 <b style="color:var(--orange)">3초 뒤 사라져요!</b><br>
+      5개 단어를 기억했다가 정답을 입력하세요 ✍️
+    </p>
+    <div class="diff-btns">
+      <button class="diff-btn lv1" onclick="startGame(1)">😊 초급 <span class="diff-badge">3~5글자</span></button>
+      <button class="diff-btn lv2" onclick="startGame(2)">🤔 중급 <span class="diff-badge">4~6글자</span></button>
+      <button class="diff-btn lv3" onclick="startGame(3)">🔥 고급 <span class="diff-badge">5~9글자</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-result" style="display:none">
+  <div class="box">
+    <div style="font-size:3rem;margin-bottom:8px" id="r-emoji">🎉</div>
+    <h1 id="r-title">결과</h1>
+    <p class="sub" id="r-sub" style="margin-bottom:0"></p>
+    <div class="result-list" id="r-list"></div>
+    <button class="big-btn blue" onclick="showStart()">🔄 난이도 선택</button>
+    <button class="big-btn green" onclick="restartSame()">⚡ 같은 난이도 재도전</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="round-dots" id="round-dots"></div>
+  <div class="top-bar">
+    <div>
+      <div class="top-label">단어</div>
+      <div class="top-val" id="word-num" style="color:var(--accent)">1 / 5</div>
+    </div>
+    <div class="timer-col">
+      <div class="timer-big" id="timer-num">60</div>
+      <div class="tbar-bg"><div class="tbar" id="tbar" style="width:100%;background:var(--green)"></div></div>
+    </div>
+    <div style="text-align:right">
+      <div class="top-label">점수</div>
+      <div class="top-val" id="score-val" style="color:var(--green)">0</div>
+    </div>
+  </div>
+
+  <div class="word-card" id="word-card">
+    <div class="w-emoji" id="w-emoji">🧠</div>
+    <div class="w-hint" id="w-hint">난이도를 선택하세요</div>
+    <div class="letters-row" id="letters-row"></div>
+    <div class="vbar-bg" id="vbar-bg" style="display:none"><div class="vbar" id="vbar" style="width:100%"></div></div>
+    <div class="status-text" id="status-txt">위에서 난이도를 선택하세요!</div>
+  </div>
+
+  <div class="click-wrap">
+    <button class="click-btn" id="click-btn" onclick="handleClick(event)" disabled>👆</button>
+    <div class="click-lbl">TAP TO REVEAL</div>
+  </div>
+
+  <div class="ans-section">
+    <div class="ans-title">✍️ 기억한 단어 입력</div>
+    <div id="ans-slots"></div>
+  </div>
+  <button class="big-btn blue" id="submit-btn" onclick="submitAnswers()" disabled>📝 정답 제출하기</button>
+</div>
+
+<script>
+const ALL_WORDS = [
+  {w:'cat',h:'동물',e:'🐱'},{w:'dog',h:'동물',e:'🐶'},{w:'egg',h:'음식',e:'🥚'},
+  {w:'sun',h:'하늘',e:'☀️'},{w:'bag',h:'물건',e:'👜'},{w:'hat',h:'모자',e:'🎩'},
+  {w:'cup',h:'식기',e:'☕'},{w:'bug',h:'곤충',e:'🐛'},{w:'ant',h:'곤충',e:'🐜'},
+  {w:'bee',h:'곤충',e:'🐝'},{w:'fox',h:'동물',e:'🦊'},{w:'owl',h:'동물',e:'🦉'},
+  {w:'pig',h:'동물',e:'🐷'},{w:'hen',h:'동물',e:'🐔'},{w:'cow',h:'동물',e:'🐄'},
+  {w:'fly',h:'곤충',e:'🪰'},{w:'arm',h:'신체',e:'💪'},{w:'ear',h:'신체',e:'👂'},
+  {w:'eye',h:'신체',e:'👁️'},{w:'leg',h:'신체',e:'🦵'},{w:'bed',h:'가구',e:'🛏️'},
+  {w:'box',h:'물건',e:'📦'},{w:'bus',h:'탈것',e:'🚌'},{w:'car',h:'탈것',e:'🚗'},
+  {w:'map',h:'물건',e:'🗺️'},{w:'pan',h:'주방',e:'🍳'},{w:'sky',h:'자연',e:'🌤️'},
+  {w:'sea',h:'자연',e:'🌊'},{w:'ice',h:'자연',e:'🧊'},{w:'pie',h:'음식',e:'🥧'},
+  {w:'jam',h:'음식',e:'🍯'},{w:'tea',h:'음료',e:'🍵'},{w:'zoo',h:'장소',e:'🦁'},
+  {w:'bear',h:'동물',e:'🐻'},{w:'bird',h:'동물',e:'🐦'},{w:'cake',h:'음식',e:'🎂'},
+  {w:'fish',h:'동물',e:'🐟'},{w:'frog',h:'동물',e:'🐸'},{w:'lion',h:'동물',e:'🦁'},
+  {w:'duck',h:'동물',e:'🦆'},{w:'deer',h:'동물',e:'🦌'},{w:'crab',h:'동물',e:'🦀'},
+  {w:'wolf',h:'동물',e:'🐺'},{w:'swan',h:'동물',e:'🦢'},{w:'mole',h:'동물',e:'🐭'},
+  {w:'milk',h:'음료',e:'🥛'},{w:'rice',h:'음식',e:'🍚'},{w:'pear',h:'과일',e:'🍐'},
+  {w:'corn',h:'채소',e:'🌽'},{w:'rose',h:'꽃',e:'🌹'},{w:'leaf',h:'자연',e:'🍃'},
+  {w:'moon',h:'하늘',e:'🌙'},{w:'rain',h:'날씨',e:'🌧️'},{w:'snow',h:'날씨',e:'❄️'},
+  {w:'wind',h:'날씨',e:'💨'},{w:'fire',h:'자연',e:'🔥'},{w:'star',h:'하늘',e:'⭐'},
+  {w:'road',h:'장소',e:'🛣️'},{w:'farm',h:'장소',e:'🚜'},{w:'lake',h:'자연',e:'🏞️'},
+  {w:'park',h:'장소',e:'🏞️'},{w:'city',h:'장소',e:'🏙️'},{w:'home',h:'집',e:'🏠'},
+  {w:'door',h:'집',e:'🚪'},{w:'lamp',h:'집',e:'🪔'},{w:'book',h:'공부',e:'📚'},
+  {w:'kite',h:'놀이',e:'🪁'},{w:'ball',h:'놀이',e:'⚽'},{w:'drum',h:'악기',e:'🥁'},
+  {w:'bell',h:'소리',e:'🔔'},{w:'gold',h:'금속',e:'🥇'},{w:'salt',h:'음식',e:'🧂'},
+  {w:'boat',h:'탈것',e:'⛵'},{w:'ship',h:'탈것',e:'🚢'},{w:'bike',h:'탈것',e:'🚲'},
+  {w:'tent',h:'야외',e:'⛺'},{w:'hand',h:'신체',e:'✋'},{w:'nose',h:'신체',e:'👃'},
+  {w:'king',h:'왕실',e:'🤴'},{w:'gift',h:'선물',e:'🎁'},{w:'ring',h:'장신구',e:'💍'},
+  {w:'song',h:'음악',e:'🎵'},{w:'game',h:'놀이',e:'🎮'},{w:'hero',h:'인물',e:'🦸'},
+  {w:'love',h:'감정',e:'❤️'},{w:'jump',h:'동작',e:'🏃'},{w:'walk',h:'동작',e:'🚶'},
+  {w:'read',h:'동작',e:'📖'},{w:'draw',h:'동작',e:'🎨'},{w:'cook',h:'동작',e:'👨‍🍳'},
+  {w:'swim',h:'동작',e:'🏊'},{w:'sing',h:'동작',e:'🎤'},{w:'kick',h:'동작',e:'🦵'},
+  {w:'lock',h:'도구',e:'🔒'},{w:'blue',h:'색깔',e:'🔵'},{w:'pink',h:'색깔',e:'🩷'},
+  {w:'apple',h:'과일',e:'🍎'},{w:'tiger',h:'동물',e:'🐯'},{w:'panda',h:'동물',e:'🐼'},
+  {w:'shark',h:'동물',e:'🦈'},{w:'eagle',h:'동물',e:'🦅'},{w:'horse',h:'동물',e:'🐴'},
+  {w:'koala',h:'동물',e:'🐨'},{w:'camel',h:'동물',e:'🐪'},{w:'goose',h:'동물',e:'🪿'},
+  {w:'sheep',h:'동물',e:'🐑'},{w:'whale',h:'동물',e:'🐋'},{w:'snail',h:'동물',e:'🐌'},
+  {w:'sloth',h:'동물',e:'🦥'},{w:'hippo',h:'동물',e:'🦛'},{w:'bread',h:'음식',e:'🍞'},
+  {w:'pizza',h:'음식',e:'🍕'},{w:'candy',h:'음식',e:'🍬'},{w:'peach',h:'과일',e:'🍑'},
+  {w:'melon',h:'과일',e:'🍈'},{w:'grape',h:'과일',e:'🍇'},{w:'lemon',h:'과일',e:'🍋'},
+  {w:'onion',h:'채소',e:'🧅'},{w:'sugar',h:'음식',e:'🍬'},{w:'bacon',h:'음식',e:'🥓'},
+  {w:'sushi',h:'음식',e:'🍣'},{w:'pasta',h:'음식',e:'🍝'},{w:'salad',h:'음식',e:'🥗'},
+  {w:'juice',h:'음료',e:'🧃'},{w:'water',h:'음료',e:'💧'},{w:'cloud',h:'날씨',e:'☁️'},
+  {w:'storm',h:'날씨',e:'⛈️'},{w:'beach',h:'장소',e:'🏖️'},{w:'house',h:'집',e:'🏠'},
+  {w:'cabin',h:'집',e:'🛖'},{w:'tower',h:'건물',e:'🗼'},{w:'river',h:'자연',e:'🏞️'},
+  {w:'plant',h:'자연',e:'🌱'},{w:'stone',h:'자연',e:'🪨'},{w:'flame',h:'자연',e:'🔥'},
+  {w:'globe',h:'지구',e:'🌍'},{w:'ocean',h:'자연',e:'🌊'},{w:'comet',h:'우주',e:'☄️'},
+  {w:'light',h:'빛',e:'💡'},{w:'music',h:'예술',e:'🎵'},{w:'dance',h:'동작',e:'💃'},
+  {w:'chess',h:'놀이',e:'♟️'},{w:'piano',h:'악기',e:'🎹'},{w:'sword',h:'도구',e:'⚔️'},
+  {w:'brush',h:'도구',e:'🖌️'},{w:'knife',h:'도구',e:'🔪'},{w:'medal',h:'상',e:'🥇'},
+  {w:'crown',h:'왕실',e:'👑'},{w:'jewel',h:'보석',e:'💎'},{w:'magic',h:'마법',e:'✨'},
+  {w:'smile',h:'감정',e:'😊'},{w:'happy',h:'감정',e:'😄'},{w:'brave',h:'감정',e:'💪'},
+  {w:'dream',h:'감정',e:'💭'},{w:'heart',h:'감정',e:'❤️'},{w:'brain',h:'신체',e:'🧠'},
+  {w:'robot',h:'기계',e:'🤖'},{w:'laser',h:'기술',e:'🔦'},{w:'night',h:'시간',e:'🌃'},
+  {w:'world',h:'지구',e:'🌍'},{w:'skate',h:'운동',e:'⛸️'},{w:'clock',h:'시간',e:'🕐'},
+  {w:'nurse',h:'직업',e:'👩‍⚕️'},{w:'model',h:'직업',e:'👗'},{w:'lunar',h:'우주',e:'🌙'},
+  {w:'orbit',h:'우주',e:'🌍'},{w:'solar',h:'우주',e:'☀️'},
+  {w:'rabbit',h:'동물',e:'🐰'},{w:'monkey',h:'동물',e:'🐒'},{w:'turtle',h:'동물',e:'🐢'},
+  {w:'parrot',h:'동물',e:'🦜'},{w:'lizard',h:'동물',e:'🦎'},{w:'donkey',h:'동물',e:'🐴'},
+  {w:'python',h:'동물',e:'🐍'},{w:'orange',h:'과일',e:'🍊'},{w:'banana',h:'과일',e:'🍌'},
+  {w:'cherry',h:'과일',e:'🍒'},{w:'muffin',h:'음식',e:'🧁'},{w:'cookie',h:'음식',e:'🍪'},
+  {w:'potato',h:'채소',e:'🥔'},{w:'carrot',h:'채소',e:'🥕'},{w:'garlic',h:'채소',e:'🧄'},
+  {w:'pepper',h:'채소',e:'🫑'},{w:'butter',h:'음식',e:'🧈'},{w:'castle',h:'건물',e:'🏰'},
+  {w:'bridge',h:'건물',e:'🌉'},{w:'market',h:'장소',e:'🏪'},{w:'museum',h:'장소',e:'🏛️'},
+  {w:'school',h:'장소',e:'🏫'},{w:'forest',h:'자연',e:'🌲'},{w:'desert',h:'자연',e:'🏜️'},
+  {w:'island',h:'자연',e:'🏝️'},{w:'flower',h:'자연',e:'🌸'},{w:'cactus',h:'식물',e:'🌵'},
+  {w:'candle',h:'집',e:'🕯️'},{w:'pencil',h:'문구',e:'✏️'},{w:'jacket',h:'옷',e:'🧥'},
+  {w:'helmet',h:'안전',e:'⛑️'},{w:'gloves',h:'옷',e:'🧤'},{w:'guitar',h:'악기',e:'🎸'},
+  {w:'violin',h:'악기',e:'🎻'},{w:'trophy',h:'상',e:'🏆'},{w:'pirate',h:'인물',e:'🏴‍☠️'},
+  {w:'farmer',h:'직업',e:'👨‍🌾'},{w:'doctor',h:'직업',e:'👨‍⚕️'},{w:'winter',h:'계절',e:'❄️'},
+  {w:'spring',h:'계절',e:'🌸'},{w:'summer',h:'계절',e:'☀️'},{w:'autumn',h:'계절',e:'🍂'},
+  {w:'planet',h:'우주',e:'🪐'},{w:'galaxy',h:'우주',e:'🌌'},{w:'rocket',h:'탈것',e:'🚀'},
+  {w:'crayon',h:'미술',e:'🖍️'},{w:'mirror',h:'가구',e:'🪞'},{w:'pillow',h:'가구',e:'😴'},
+  {w:'giraffe',h:'동물',e:'🦒'},{w:'dolphin',h:'동물',e:'🐬'},{w:'penguin',h:'동물',e:'🐧'},
+  {w:'ostrich',h:'동물',e:'🦤'},{w:'hamster',h:'동물',e:'🐹'},{w:'lobster',h:'동물',e:'🦞'},
+  {w:'chicken',h:'동물',e:'🐔'},{w:'gorilla',h:'동물',e:'🦍'},{w:'sparrow',h:'동물',e:'🐦'},
+  {w:'peacock',h:'동물',e:'🦚'},{w:'avocado',h:'과일',e:'🥑'},{w:'coconut',h:'과일',e:'🥥'},
+  {w:'lettuce',h:'채소',e:'🥬'},{w:'pumpkin',h:'채소',e:'🎃'},{w:'popcorn',h:'음식',e:'🍿'},
+  {w:'pancake',h:'음식',e:'🥞'},{w:'ketchup',h:'음식',e:'🍅'},{w:'mustard',h:'음식',e:'🌭'},
+  {w:'pretzel',h:'음식',e:'🥨'},{w:'blanket',h:'가구',e:'🛏️'},{w:'lantern',h:'조명',e:'🏮'},
+  {w:'compass',h:'도구',e:'🧭'},{w:'diamond',h:'보석',e:'💎'},{w:'crystal',h:'보석',e:'🔮'},
+  {w:'volcano',h:'자연',e:'🌋'},{w:'rainbow',h:'날씨',e:'🌈'},{w:'tornado',h:'날씨',e:'🌪️'},
+  {w:'swimmer',h:'운동',e:'🏊'},{w:'captain',h:'직업',e:'⚓'},{w:'soldier',h:'직업',e:'💂'},
+  {w:'emperor',h:'왕실',e:'👑'},{w:'warrior',h:'역사',e:'⚔️'},{w:'sheriff',h:'직업',e:'🤠'},
+  {w:'balloon',h:'장식',e:'🎈'},{w:'cabinet',h:'가구',e:'🪑'},{w:'curtain',h:'집',e:'🪟'},
+  {w:'pilgrim',h:'역사',e:'🏕️'},{w:'gymnast',h:'운동',e:'🤸'},
+  {w:'elephant',h:'동물',e:'🐘'},{w:'kangaroo',h:'동물',e:'🦘'},{w:'ladybug',h:'동물',e:'🐞'},
+  {w:'scorpion',h:'동물',e:'🦂'},{w:'reindeer',h:'동물',e:'🦌'},{w:'squirrel',h:'동물',e:'🐿️'},
+  {w:'hedgehog',h:'동물',e:'🦔'},{w:'flamingo',h:'동물',e:'🦩'},{w:'broccoli',h:'채소',e:'🥦'},
+  {w:'mushroom',h:'채소',e:'🍄'},{w:'eggplant',h:'채소',e:'🍆'},{w:'sandwich',h:'음식',e:'🥪'},
+  {w:'smoothie',h:'음료',e:'🥤'},{w:'lollipop',h:'음식',e:'🍭'},{w:'doughnut',h:'음식',e:'🍩'},
+  {w:'barbecue',h:'음식',e:'🍖'},{w:'hospital',h:'건물',e:'🏥'},{w:'mountain',h:'자연',e:'⛰️'},
+  {w:'baseball',h:'운동',e:'⚾'},{w:'football',h:'운동',e:'🏈'},{w:'marathon',h:'운동',e:'🏃'},
+  {w:'calendar',h:'물건',e:'📅'},{w:'keyboard',h:'기술',e:'⌨️'},{w:'backpack',h:'물건',e:'🎒'},
+  {w:'umbrella',h:'날씨',e:'☂️'},{w:'universe',h:'우주',e:'🌌'},{w:'asteroid',h:'우주',e:'☄️'},
+  {w:'snowball',h:'놀이',e:'❄️'},{w:'bluebell',h:'꽃',e:'🌸'},
+  {w:'butterfly',h:'곤충',e:'🦋'},{w:'crocodile',h:'동물',e:'🐊'},{w:'porcupine',h:'동물',e:'🦔'},
+  {w:'chameleon',h:'동물',e:'🦎'},{w:'jellyfish',h:'동물',e:'🪼'},{w:'pineapple',h:'과일',e:'🍍'},
+  {w:'blueberry',h:'과일',e:'🫐'},{w:'raspberry',h:'과일',e:'🍓'},{w:'chocolate',h:'음식',e:'🍫'},
+  {w:'hamburger',h:'음식',e:'🍔'},{w:'spaghetti',h:'음식',e:'🍝'},{w:'waterfall',h:'자연',e:'💦'},
+  {w:'adventure',h:'활동',e:'🗺️'},{w:'telescope',h:'도구',e:'🔭'},{w:'staircase',h:'건물',e:'🏢'},
+  {w:'wolverine',h:'동물',e:'🦡'},{w:'stargazer',h:'취미',e:'🔭'},
+];
+
+const DIFF_RANGE={1:[3,5],2:[4,6],3:[5,9]};
+const DIFF_TIME={1:60,2:50,3:40};
+const VANISH_MS=3000;
+
+let G={diff:1,words:[],current:0,clicks:0,timeLeft:60,totalTime:60,
+  timerInterval:null,vanishTimeout:null,vanishInterval:null,vanishStart:0,
+  phase:'start',score:0};
+
+function getPool(diff){
+  const [mn,mx]=DIFF_RANGE[diff];
+  return ALL_WORDS.filter(x=>x.w.length>=mn&&x.w.length<=mx);
+}
+function pickWords(diff){
+  return [...getPool(diff)].sort(()=>Math.random()-0.5).slice(0,5);
+}
+
+function showStart(){
+  clearAll();
+  document.getElementById('ov-start').style.display='flex';
+  document.getElementById('ov-result').style.display='none';
+}
+
+function startGame(diff){
+  clearAll();
+  G={diff,words:pickWords(diff),current:0,clicks:0,
+    timeLeft:DIFF_TIME[diff],totalTime:DIFF_TIME[diff],
+    timerInterval:null,vanishTimeout:null,vanishInterval:null,vanishStart:0,
+    phase:'clicking',score:0};
+
+  document.getElementById('ov-start').style.display='none';
+  document.getElementById('ov-result').style.display='none';
+  document.getElementById('click-btn').disabled=false;
+  document.getElementById('submit-btn').disabled=true;
+  document.getElementById('score-val').textContent='0';
+  document.getElementById('word-card').className='word-card';
+
+  buildRoundDots();
+  buildAnswerSlots();
+  renderWord();
+  startTimer();
+}
+
+function restartSame(){startGame(G.diff);}
+
+function clearAll(){
+  clearInterval(G.timerInterval);
+  clearTimeout(G.vanishTimeout);
+  clearInterval(G.vanishInterval);
+}
+
+function buildRoundDots(){
+  const c=document.getElementById('round-dots');
+  c.innerHTML='';
+  for(let i=0;i<5;i++){
+    const d=document.createElement('div');
+    d.className='rdot'+(i===0?' curr':'');
+    d.id='rdot-'+i;
+    c.appendChild(d);
+  }
+}
+function updateDots(){
+  for(let i=0;i<5;i++){
+    const d=document.getElementById('rdot-'+i);
+    if(!d)continue;
+    d.className='rdot'+(i<G.current?' done':i===G.current?' curr':'');
+  }
+}
+
+function startTimer(){
+  clearInterval(G.timerInterval);
+  G.timerInterval=setInterval(()=>{
+    G.timeLeft=Math.max(0,G.timeLeft-1);
+    updateTimerUI();
+    if(G.timeLeft<=0){clearInterval(G.timerInterval);endPhase();}
+  },1000);
+}
+function updateTimerUI(){
+  const n=document.getElementById('timer-num');
+  const b=document.getElementById('tbar');
+  n.textContent=G.timeLeft;
+  const pct=G.timeLeft/G.totalTime;
+  n.className='timer-big'+(G.timeLeft<=8?' urgent':G.timeLeft<=15?' warn':'');
+  b.style.width=(pct*100)+'%';
+  b.style.background=G.timeLeft<=8
+    ?'linear-gradient(90deg,var(--red),var(--orange))'
+    :G.timeLeft<=15
+    ?'linear-gradient(90deg,var(--orange),var(--yellow))'
+    :'linear-gradient(90deg,var(--accent),var(--green))';
+}
+
+function renderWord(){
+  const w=G.words[G.current];
+  document.getElementById('w-emoji').textContent=w.e;
+  document.getElementById('w-hint').textContent=`힌트: ${w.h} · ${w.w.length}글자`;
+  document.getElementById('word-num').textContent=`${G.current+1} / 5`;
+
+  const row=document.getElementById('letters-row');
+  row.innerHTML='';
+  for(let i=0;i<w.w.length;i++){
+    const b=document.createElement('div');
+    b.className='lbox';
+    b.id='lb-'+i;
+    b.textContent='_';
+    row.appendChild(b);
+  }
+  document.getElementById('vbar-bg').style.display='none';
+  document.getElementById('vbar').style.width='100%';
+  document.getElementById('word-card').className='word-card state-reveal';
+  document.getElementById('status-txt').textContent=`클릭하세요! (${w.w.length}번)`;
+  document.getElementById('click-btn').disabled=false;
+  updateDots();
+}
+
+function handleClick(evt){
+  if(G.phase!=='clicking')return;
+  const w=G.words[G.current];
+  G.clicks++;
+
+  const btn=document.getElementById('click-btn');
+  btn.style.transform='scale(0.88)';
+  setTimeout(()=>btn.style.transform='',80);
+
+  const idx=G.clicks-1;
+  const box=document.getElementById('lb-'+idx);
+  if(box){box.textContent=w.w[idx].toUpperCase();box.className='lbox lit';}
+
+  const ft=document.createElement('div');
+  ft.className='float-letter';
+  ft.textContent=w.w[idx]?.toUpperCase()||'✓';
+  ft.style.left=(evt.clientX-10)+'px';
+  ft.style.top=(evt.clientY-10)+'px';
+  document.body.appendChild(ft);
+  setTimeout(()=>ft.remove(),800);
+
+  const rem=w.w.length-G.clicks;
+  document.getElementById('status-txt').textContent=
+    rem>0?`앞으로 ${rem}번 더!`:'완성! 3초 후 사라져요 👀';
+
+  if(G.clicks>=w.w.length){
+    for(let i=0;i<w.w.length;i++){
+      const b=document.getElementById('lb-'+i);
+      if(b)b.className='lbox done';
+    }
+    document.getElementById('word-card').className='word-card state-vanish';
+    document.getElementById('click-btn').disabled=true;
+    startVanish();
+  }
+}
+
+function startVanish(){
+  G.phase='vanishing';
+  const vbg=document.getElementById('vbar-bg');
+  const vb=document.getElementById('vbar');
+  vbg.style.display='block';
+  vb.style.width='100%';
+  G.vanishStart=Date.now();
+
+  clearInterval(G.vanishInterval);
+  G.vanishInterval=setInterval(()=>{
+    const pct=Math.max(0,1-(Date.now()-G.vanishStart)/VANISH_MS);
+    vb.style.width=(pct*100)+'%';
+    if(pct<=0)clearInterval(G.vanishInterval);
+  },50);
+
+  clearTimeout(G.vanishTimeout);
+  G.vanishTimeout=setTimeout(()=>{
+    clearInterval(G.vanishInterval);
+    hideWord();
+  },VANISH_MS);
+}
+
+function hideWord(){
+  const w=G.words[G.current];
+  for(let i=0;i<w.w.length;i++){
+    const b=document.getElementById('lb-'+i);
+    if(b){b.textContent='?';b.className='lbox hidden';}
+  }
+  document.getElementById('vbar-bg').style.display='none';
+  document.getElementById('status-txt').textContent='기억하셨나요? 👁️';
+  document.getElementById('word-card').className='word-card state-done';
+
+  // 정답 슬롯 이모지 공개
+  const em=document.getElementById('aemoji-'+G.current);
+  if(em)em.textContent=G.words[G.current].e;
+
+  setTimeout(()=>{
+    if(G.current<4){
+      G.current++;G.clicks=0;G.phase='clicking';renderWord();
+    } else {
+      clearInterval(G.timerInterval);endPhase();
+    }
+  },700);
+}
+
+function endPhase(){
+  G.phase='input';
+  clearAll();
+  document.getElementById('click-btn').disabled=true;
+  document.getElementById('submit-btn').disabled=false;
+  document.getElementById('word-card').className='word-card';
+  document.getElementById('w-emoji').textContent='✍️';
+  document.getElementById('w-hint').textContent='기억한 단어를 아래에 입력하세요';
+  document.getElementById('letters-row').innerHTML='';
+  document.getElementById('status-txt').textContent='';
+  document.getElementById('vbar-bg').style.display='none';
+  document.getElementById('word-num').textContent='입력 중';
+
+  for(let i=0;i<5;i++){
+    const em=document.getElementById('aemoji-'+i);
+    if(em&&G.words[i])em.textContent=G.words[i].e;
+    const inp=document.getElementById('ainp-'+i);
+    if(inp)inp.disabled=false;
+  }
+  setTimeout(()=>{
+    const f=document.getElementById('ainp-0');
+    if(f)f.focus();
+  },100);
+  showToast('✍️ 기억한 단어를 입력하세요!');
+}
+
+function buildAnswerSlots(){
+  const s=document.getElementById('ans-slots');
+  s.innerHTML='';
+  for(let i=0;i<5;i++){
+    const row=document.createElement('div');
+    row.className='ans-row';
+    row.innerHTML=`
+      <div class="ans-num">${i+1}</div>
+      <div class="ans-emoji" id="aemoji-${i}">❓</div>
+      <input class="ans-input" id="ainp-${i}" type="text"
+        placeholder="영단어 입력..." disabled
+        autocomplete="off" autocorrect="off" spellcheck="false"
+        onkeydown="onKey(event,${i})"/>`;
+    s.appendChild(row);
+  }
+}
+
+function onKey(e,i){
+  if(e.key==='Enter'){
+    const n=document.getElementById('ainp-'+(i+1));
+    if(n)n.focus(); else submitAnswers();
+  }
+}
+
+function submitAnswers(){
+  if(G.phase!=='input')return;
+  G.phase='result';clearAll();
+  let correct=0;
+  const results=G.words.map((w,i)=>{
+    const val=(document.getElementById('ainp-'+i)?.value||'').trim().toLowerCase();
+    const ok=val===w.w;
+    if(ok)correct++;
+    const inp=document.getElementById('ainp-'+i);
+    if(inp)inp.className='ans-input '+(ok?'ok':'wrong');
+    return{word:w,val,ok};
+  });
+  G.score=correct;
+  document.getElementById('score-val').textContent=correct;
+  setTimeout(()=>showResult(results,correct),350);
+}
+
+function showResult(results,correct){
+  const emojis=['😢','😅','😊','🎉','🏆'];
+  const titles=['아쉬워요!','조금 더!','잘했어요!','대단해요!','완벽해요!'];
+  const subs=[
+    '0개 정답. 다시 도전!',
+    `${correct}개 정답. 조금만 더!`,
+    `${correct}개 정답! 훌륭해요 😄`,
+    `${correct}개 정답! 영어 실력 최고!`,
+    '5개 모두 정답! 🌟 천재네요!',
+  ];
+  document.getElementById('r-emoji').textContent=emojis[correct];
+  document.getElementById('r-title').textContent=`${emojis[correct]} ${titles[correct]}`;
+  document.getElementById('r-sub').textContent=subs[correct];
+  const list=document.getElementById('r-list');
+  list.innerHTML='';
+  results.forEach(r=>{
+    const d=document.createElement('div');
+    d.className='r-item '+(r.ok?'ok':'bad');
+    d.innerHTML=`<span style="font-size:1.3rem">${r.word.e}</span>
+      <span class="r-word">${r.word.w}</span>
+      <span class="r-tag">${r.word.h}</span>
+      <span>${r.ok?'✅':'❌ <span style="font-size:0.8rem;color:var(--muted)">'+(r.val||'?')+'</span>'}</span>`;
+    list.appendChild(d);
+  });
+  document.getElementById('ov-result').style.display='flex';
+}
+
+let _tt;
+function showToast(msg){
+  let t=document.getElementById('_toast');
+  if(!t){t=document.createElement('div');t.id='_toast';
+    t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);'+
+      'background:var(--panel);border:1px solid var(--border);color:var(--accent);'+
+      'padding:9px 20px;border-radius:40px;font-family:"Fredoka One",cursive;'+
+      'font-size:0.85rem;letter-spacing:1px;z-index:999;transition:transform 0.3s;white-space:nowrap;';
+    document.body.appendChild(t);}
+  t.textContent=msg;t.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(_tt);_tt=setTimeout(()=>t.style.transform='translateX(-50%) translateY(70px)',2500);
+}
+
+const bgc=document.getElementById('bg'),bgx=bgc.getContext('2d');
+let bstars=[];
+function resizeBg(){bgc.width=innerWidth;bgc.height=innerHeight;}
+resizeBg();window.addEventListener('resize',resizeBg);
+for(let i=0;i<70;i++)bstars.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,
+  r:Math.random()*1.4+0.3,a:Math.random(),da:Math.random()*0.004+0.001});
+(function ab(){
+  bgx.clearRect(0,0,bgc.width,bgc.height);
+  bstars.forEach(s=>{s.a+=s.da;if(s.a>1||s.a<0)s.da*=-1;
+    bgx.globalAlpha=s.a*0.6;bgx.fillStyle='#88ccff';
+    bgx.beginPath();bgx.arc(s.x,s.y,s.r,0,Math.PI*2);bgx.fill();});
+  requestAnimationFrame(ab);
+})();
+</script>
+</body>
+</html>
