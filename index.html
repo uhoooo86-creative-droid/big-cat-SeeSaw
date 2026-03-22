@@ -195,25 +195,68 @@ body{font-family:'Nunito',sans-serif;background:#08080f;display:flex;align-items
 .combo-key.hit{border-color:#FFD700;color:#FFD700;background:#2a2a00;box-shadow:0 0 6px #FFD70066;}
 .combo-key.wrong{border-color:#ff4444;color:#ff4444;animation:wrongFlash 0.25s;}
 @keyframes wrongFlash{0%,100%{opacity:1;}50%{opacity:0;}}
-.dpad-wrap{display:none;flex-direction:column;align-items:center;gap:2px;padding:3px 0 1px;}
-.dpad-wrap.active{display:flex;}
-.dpad-row{display:flex;gap:3px;}
-.dpad-btn{
-  width:40px;height:40px;border-radius:10px;border:2px solid #333;
-  background:#111120;color:#aaa;font-size:18px;
+/* ★ COMBO OVERLAY — full-screen modal dpad ★ */
+#combo-overlay{
+  display:none;
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,0.75);
+  align-items:flex-end;justify-content:center;
+  padding-bottom:12px;
+  backdrop-filter:blur(2px);
+}
+#combo-overlay.active{display:flex;}
+.combo-modal{
+  width:100%;max-width:480px;
+  background:rgba(10,10,25,0.97);
+  border-top:2px solid #FFD700;
+  border-radius:20px 20px 0 0;
+  padding:14px 16px 20px;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  animation:slideUp 0.25s ease-out;
+}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.combo-title{font-family:'Black Han Sans',sans-serif;font-size:15px;letter-spacing:2px;text-align:center;}
+.combo-title.p1t{color:#FF8C00;}
+.combo-title.p2t{color:#bb88ff;}
+.combo-seq-display{display:flex;gap:7px;align-items:center;}
+.csd-key{
+  width:32px;height:32px;border-radius:8px;
+  border:2px solid #333;background:#111120;
   display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:#666;font-weight:900;
+  transition:all 0.15s;
+}
+.csd-key.hit{border-color:#FFD700;color:#FFD700;background:#2a2500;
+  box-shadow:0 0 10px #FFD70066;transform:scale(1.1);}
+.csd-key.wrong{border-color:#ff4444;color:#ff4444;background:#2a0000;
+  animation:wFlash 0.3s;}
+@keyframes wFlash{0%,100%{opacity:1;}50%{opacity:0.2;}}
+/* D-PAD inside overlay */
+.dpad-wrap{display:flex;flex-direction:column;align-items:center;gap:5px;}
+.dpad-row{display:flex;gap:5px;}
+.dpad-btn{
+  width:64px;height:64px;border-radius:14px;
+  background:#161625;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;
   cursor:pointer;transition:all 0.08s;
   user-select:none;-webkit-user-select:none;touch-action:manipulation;
+  position:relative;
 }
-.dpad-btn:active,.dpad-btn.pressed{background:#222240;transform:scale(0.90);}
-.dpad-btn.empty{background:transparent;border-color:transparent;pointer-events:none;width:40px;height:40px;}
-.dpad-hint{font-size:8px;font-weight:900;letter-spacing:1px;text-align:center;opacity:0.5;}
-.dpad-p1 .dpad-btn{border-color:#FF450055;}
-.dpad-p1 .dpad-btn:active{border-color:#FF4500;color:#FF8C00;background:#2a1000;}
-.dpad-p1 .dpad-hint{color:#FF8C00;}
-.dpad-p2 .dpad-btn{border-color:#9B59B655;}
-.dpad-p2 .dpad-btn:active{border-color:#9B59B6;color:#bb88ff;background:#1a0a2a;}
-.dpad-p2 .dpad-hint{color:#bb88ff;}
+.dpad-btn::after{content:'';position:absolute;inset:0;border-radius:14px;border:2px solid #333;}
+.dpad-btn:active,.dpad-btn.pressed{background:#222240;transform:scale(0.88);}
+.dpad-btn:active::after,.dpad-btn.pressed::after{border-color:#FFD700;}
+.dpad-btn.empty{background:transparent;pointer-events:none;}
+.dpad-btn.empty::after{display:none;}
+.dpad-p1 .dpad-btn::after{border-color:#FF450066;}
+.dpad-p1 .dpad-btn:active::after{border-color:#FF4500;}
+.dpad-p2 .dpad-btn::after{border-color:#9B59B666;}
+.dpad-p2 .dpad-btn:active::after{border-color:#9B59B6;}
+.combo-cancel{
+  font-size:11px;color:#555;font-weight:700;cursor:pointer;
+  padding:4px 12px;border-radius:8px;background:#111120;border:1px solid #222;
+}
+.combo-cancel:active{opacity:0.6;}
 .key-hints{display:flex;justify-content:space-around;padding:2px 8px 0;opacity:0.35;}
 .kh{font-size:8px;color:#999;font-weight:700;text-align:center;line-height:1.3;}
 
@@ -233,6 +276,137 @@ body{font-family:'Nunito',sans-serif;background:#08080f;display:flex;align-items
   border-radius:12px;padding:12px 36px;font-family:'Black Han Sans',sans-serif;
   font-size:18px;letter-spacing:2px;cursor:pointer;box-shadow:0 4px 20px #FF450055;}
 .btn-retry:active{transform:scale(0.97);}
+
+/* ── HP DELTA NUMBERS ── */
+.hp-delta {
+  position:absolute;
+  font-family:'Black Han Sans',sans-serif;
+  font-size:22px;
+  pointer-events:none;
+  z-index:65;
+  animation:hpDeltaAnim 1.2s ease-out forwards;
+}
+@keyframes hpDeltaAnim {
+  0%   { opacity:1; transform:translateY(0) scale(1); }
+  20%  { transform:translateY(-12px) scale(1.15); }
+  100% { opacity:0; transform:translateY(-55px) scale(0.9); }
+}
+
+/* ── FIGHTER HP STATE (지친 모습) ── */
+.f-img { transition:filter 0.4s ease, transform 0.3s ease; }
+/* 체력 70% 이하 - 약간 지침 */
+.f-img.tired {
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6)) saturate(0.8) brightness(0.9);
+}
+/* 체력 40% 이하 - 많이 지침 */
+.f-img.exhausted {
+  filter: drop-shadow(0 4px 12px rgba(255,80,0,0.5)) saturate(0.5) brightness(0.75) sepia(0.3);
+  animation: tiredSway 2s ease-in-out infinite;
+}
+/* 체력 15% 이하 - 빈사 */
+.f-img.critical {
+  filter: drop-shadow(0 4px 16px rgba(255,0,0,0.7)) saturate(0.2) brightness(0.6) sepia(0.5);
+  animation: critSway 1s ease-in-out infinite;
+}
+@keyframes tiredSway {
+  0%,100% { transform: rotate(-1.5deg) translateY(0); }
+  50%      { transform: rotate(1.5deg) translateY(-2px); }
+}
+@keyframes critSway {
+  0%,100% { transform: rotate(-3deg) translateY(0); }
+  50%      { transform: rotate(3deg) translateY(-3px); }
+}
+.fighter.right .f-img.tired,
+.fighter.right .f-img.exhausted,
+.fighter.right .f-img.critical {
+  transform-origin: center bottom;
+}
+/* 빈사 상태 HP바 깜빡임 - 더 강조 */
+.hud-fill.crit { animation: critP 0.35s ease-in-out infinite; }
+@keyframes critP { 0%,100%{opacity:1;}50%{opacity:0.3;} }
+
+/* ── SPECIAL SKILL 발동 이펙트 ── */
+/* 스페셜 차지 아우라 */
+.skill-aura {
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+  z-index:4;
+  animation:auraExpand 0.5s ease-out forwards;
+}
+@keyframes auraExpand {
+  0%   { opacity:0.9; transform:scale(0.2); }
+  100% { opacity:0;   transform:scale(3.5); }
+}
+
+/* 히트 파티클 */
+.hit-particle {
+  position:absolute;
+  width:8px; height:8px;
+  border-radius:50%;
+  pointer-events:none;
+  z-index:62;
+  animation:particleFly var(--dur,0.7s) ease-out forwards;
+}
+@keyframes particleFly {
+  0%   { opacity:1; transform:translate(0,0) scale(1); }
+  100% { opacity:0; transform:translate(var(--tx,0px),var(--ty,-60px)) scale(0.2); }
+}
+
+/* 스페셜 히트 파문 */
+.hit-ring {
+  position:absolute;
+  border-radius:50%;
+  border:3px solid currentColor;
+  pointer-events:none;
+  z-index:61;
+  animation:ringExpand 0.5s ease-out forwards;
+}
+@keyframes ringExpand {
+  0%   { opacity:0.9; transform:scale(0.1); width:20px; height:20px; }
+  100% { opacity:0;   transform:scale(1);   width:120px; height:120px; }
+}
+
+/* 시크릿/울트라 전체화면 번쩍 */
+.ultra-flash {
+  position:fixed; inset:0; z-index:100;
+  pointer-events:none;
+  animation:ultraFlashAnim 0.6s ease-out forwards;
+}
+@keyframes ultraFlashAnim {
+  0%   { opacity:0; }
+  10%  { opacity:1; }
+  40%  { opacity:0.8; }
+  100% { opacity:0; }
+}
+
+/* 스트릭 카운터 강조 */
+.streak-badge { font-size:14px !important; }
+.streak-badge.show { animation:streakPop 0.3s ease-out; }
+@keyframes streakPop {
+  0%   { transform:scale(0.5); }
+  60%  { transform:scale(1.3); }
+  100% { transform:scale(1); }
+}
+
+/* 시크릿 버튼 더 눈에 띄게 */
+.sk-secret {
+  position:relative; overflow:visible !important;
+}
+.sk-secret::before {
+  content:'!';
+  position:absolute; top:-8px; right:-6px;
+  background:#ff00ff; color:#fff;
+  width:16px; height:16px; border-radius:50%;
+  font-size:11px; font-weight:900;
+  display:flex; align-items:center; justify-content:center;
+  animation:secretBlink 0.5s ease-in-out infinite alternate;
+  z-index:10;
+}
+@keyframes secretBlink {
+  from { transform:scale(1); box-shadow:0 0 6px #ff00ff; }
+  to   { transform:scale(1.3); box-shadow:0 0 14px #ff00ffaa; }
+}
 </style>
 </head>
 <body>
@@ -319,24 +493,7 @@ body{font-family:'Nunito',sans-serif;background:#08080f;display:flex;align-items
           <button class="sk sk-21" id="p1b3" onclick="act(1,'s2')"><span class="ico" id="p1sk2i">💥</span><div class="inf"><div class="nm" id="p1sk2n">SP2</div><div class="pw" id="p1sk2pw">×1.5×2</div></div><div class="cd" id="p1cd2"></div></button>
         </div>
         <div class="combo-wrap" id="p1-combo"></div>
-        <div class="dpad-wrap dpad-p1" id="p1-dpad">
-          <div class="dpad-hint">COMBO INPUT</div>
-          <div class="dpad-row">
-            <div class="dpad-btn empty"></div>
-            <div class="dpad-btn" id="p1-dup"   ontouchstart="touchDir(0,'up',this)"   onmousedown="touchDir(0,'up',this)">↑</div>
-            <div class="dpad-btn empty"></div>
-          </div>
-          <div class="dpad-row">
-            <div class="dpad-btn" id="p1-dleft"  ontouchstart="touchDir(0,'left',this)"  onmousedown="touchDir(0,'left',this)">←</div>
-            <div class="dpad-btn empty"></div>
-            <div class="dpad-btn" id="p1-dright" ontouchstart="touchDir(0,'right',this)" onmousedown="touchDir(0,'right',this)">→</div>
-          </div>
-          <div class="dpad-row">
-            <div class="dpad-btn empty"></div>
-            <div class="dpad-btn" id="p1-ddown"  ontouchstart="touchDir(0,'down',this)"  onmousedown="touchDir(0,'down',this)">↓</div>
-            <div class="dpad-btn empty"></div>
-          </div>
-        </div>
+
         <div class="key-hints"><div class="kh">Z<br>ATK</div><div class="kh">X<br>DEF</div><div class="kh">C<br>SP1</div><div class="kh">V<br>SP2</div></div>
       </div>
       <div class="skills-divider"></div>
@@ -349,27 +506,20 @@ body{font-family:'Nunito',sans-serif;background:#08080f;display:flex;align-items
           <button class="sk sk-22" id="p2b3" onclick="act(2,'s2')"><span class="ico" id="p2sk2i">💥</span><div class="inf"><div class="nm" id="p2sk2n">SP2</div><div class="pw" id="p2sk2pw">×1.5×2</div></div><div class="cd" id="p2cd2"></div></button>
         </div>
         <div class="combo-wrap" id="p2-combo"></div>
-        <div class="dpad-wrap dpad-p2" id="p2-dpad">
-          <div class="dpad-hint">COMBO INPUT</div>
-          <div class="dpad-row">
-            <div class="dpad-btn empty"></div>
-            <div class="dpad-btn" id="p2-dup"   ontouchstart="touchDir(1,'up',this)"   onmousedown="touchDir(1,'up',this)">↑</div>
-            <div class="dpad-btn empty"></div>
-          </div>
-          <div class="dpad-row">
-            <div class="dpad-btn" id="p2-dleft"  ontouchstart="touchDir(1,'left',this)"  onmousedown="touchDir(1,'left',this)">←</div>
-            <div class="dpad-btn empty"></div>
-            <div class="dpad-btn" id="p2-dright" ontouchstart="touchDir(1,'right',this)" onmousedown="touchDir(1,'right',this)">→</div>
-          </div>
-          <div class="dpad-row">
-            <div class="dpad-btn empty"></div>
-            <div class="dpad-btn" id="p2-ddown"  ontouchstart="touchDir(1,'down',this)"  onmousedown="touchDir(1,'down',this)">↓</div>
-            <div class="dpad-btn empty"></div>
-          </div>
-        </div>
+
         <div class="key-hints"><div class="kh">←<br>ATK</div><div class="kh">↓<br>DEF</div><div class="kh">↑<br>SP1</div><div class="kh">→<br>SP2</div></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ★ COMBO OVERLAY ★ -->
+<div id="combo-overlay">
+  <div class="combo-modal" id="combo-modal">
+    <div class="combo-title p1t" id="combo-modal-title">🔓 SECRET COMBO</div>
+    <div class="combo-seq-display" id="combo-seq-display"></div>
+    <div class="dpad-wrap" id="combo-dpad" style=""></div>
+    <div class="combo-cancel" onclick="cancelCombo()">✕ 취소</div>
   </div>
 </div>
 
@@ -665,8 +815,8 @@ function stopAnim(key){if(anim[key]){clearInterval(anim[key]);delete anim[key];}
 /* STATE */
 let gameMode='cpu',selStep=0,selKeys=[null,null];
 let P=[null,null],currentTurn=0,busy=false;
-const SECRET_SEQ=['left','right','left','left','right'];
-const ULTRA_SEQ=['left','right','up','left'];
+const SECRET_SEQ=['left','right','left','right'];
+const ULTRA_SEQ=['left','right','left','right']; // same = unused
 
 /* TITLE */
 (()=>{
@@ -736,7 +886,6 @@ function initBattle(p1k,p2k){
   document.getElementById('p2-panel').style.pointerEvents=gameMode==='cpu'?'none':'auto';
   renderItems();rmSecret();updateBars();
   // D-PAD 숨기기
-  ['p1-dpad','p2-dpad'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
   setLog('⚡ <span class="hl">BATTLE START!</span> P1 goes first!');
   setTimeout(()=>SFX.battleStart(), 200);
   setTurnUI();setBtns(true,false);
@@ -804,7 +953,10 @@ function doAtk(pi,dmg,hard,log,big=false,combo=false){
     if(hard) SFX.superHit(); else SFX.hit();
     flashScreen(CATS[P[pi].key].color,hard?0.45:0.25);
     P[1-pi].hp=Math.max(0,P[1-pi].hp-dmg);
-    spawnDmg(dmg,pi===0?'right':'left',hard);if(hard)spawnSuper(dmg>300?'SUPER!':'NICE!');
+    spawnDmg(dmg,pi===0?'right':'left',hard,false);
+    if(hard) spawnSuper(dmg>300?'SUPER!':'NICE!');
+    // 스페셜 아우라
+    if(big) spawnAura(pi===0?'left':'right', CATS[P[pi].key].color);
     updateBars();updStreak(pi,true);if(P[pi].cd1>0)P[pi].cd1--;if(P[pi].cd2>0)P[pi].cd2--;
     setTimeout(()=>{if(P[1-pi].hp<=0){endBattle(pi);return;}endTurn(pi);},combo?380:520);
   },big?220:180);
@@ -825,7 +977,9 @@ function doSecret(pi,ultra){
     stopAnim('img-'+hk);playAnim('img-'+hk,SP[P[1-pi].key].hit,10,()=>loopAnim('img-'+hk,SP[P[1-pi].key].idle,7));
     shakeArena('hard');P[1-pi].hp=Math.max(0,P[1-pi].hp-dmg);
     SFX.superHit();
-    spawnDmg(dmg,pi===0?'right':'left',true);spawnSuper(ultra?'ULTRA!':'SECRET!');
+    spawnDmg(dmg, pi===0?'right':'left', true, ultra);
+    spawnSuper(ultra?'⭐ ULTRA CRIT!':'🔓 SECRET!');
+    if(ultra) spawnUltraFlash(CATS[P[pi].key].color);
     updateBars();P[pi].streak=0;P[pi].secretVisible=false;P[pi].comboTarget=null;P[pi].comboBuffer=[];
     rmSecret();hideStreak();updCombo(pi);if(P[pi].cd1>0)P[pi].cd1--;if(P[pi].cd2>0)P[pi].cd2--;
     setTimeout(()=>{if(P[1-pi].hp<=0){endBattle(pi);return;}endTurn(pi);},600);
@@ -862,7 +1016,7 @@ function cpuTurn(){
     stopAnim('img-p1');playAnim('img-p1',SP[op.key].hit,10,()=>loopAnim('img-p1',SP[op.key].idle,7));
     shakeArena(hard?'hard':'normal');flashScreen(CATS[me.key].color,hard?0.4:0.22);
     if(hard) SFX.superHit(); else SFX.hit();
-    P[0].hp=Math.max(0,P[0].hp-dmg);spawnDmg(dmg,'left',hard);if(hard)spawnSuper('SUPER!');updateBars();
+    P[0].hp=Math.max(0,P[0].hp-dmg);spawnDmg(dmg,'left',hard,false);if(hard){spawnSuper('SUPER!');spawnAura('right',CATS[me.key].color);}updateBars();
     if(P[0].hp<=0){setTimeout(()=>endBattle(1),600);return;}setTimeout(()=>endTurn(1),520);
   },200);
 }
@@ -870,74 +1024,150 @@ function cpuTurn(){
 function updStreak(pi,hit){
   if(hit)P[pi].streak++;else P[pi].streak=0;
   const b=document.getElementById('streak-badge');
-  if(P[pi].streak>=2){b.textContent=`🔥 ${P[pi].streak} HIT!`;b.classList.add('show');SFX.streak();}else hideStreak();
-  if(P[pi].streak>=3&&!P[pi].secretVisible){
+  const s=P[pi].streak;
+  if(s>=2){
+    b.textContent = s>=5?`🔥🔥 ${s} HIT COMBO!`:s>=3?`🔥 ${s} HIT!`:`✨ ${s} HIT!`;
+    b.style.fontSize = s>=5?'16px':s>=3?'14px':'12px';
+    b.classList.add('show');
+    // 스트릭 강도에 따라 아레나 색
+    if(s>=5) flashScreen('#FF4500',0.15);
+    SFX.streak();
+  }else hideStreak();
+  if(s>=3&&!P[pi].secretVisible){
     P[pi].secretVisible=true;addSecret(pi);
     SFX.secretUnlock();
-    setLog(`🔓 <span class="hl">3 HIT!</span> SECRET for ${pi===0?'P1':'P2'}!`);startCombo(pi,'secret');
+    setLog(`🔓 <span class="hl">3 HIT STREAK!</span> ${pi===0?'P1':'P2'} — 시크릿 버튼 눌러봐! ⬇️`);startCombo(pi,'secret');
   }
 }
 function hideStreak(){document.getElementById('streak-badge').classList.remove('show');}
 function addSecret(pi){
-  const g=document.getElementById(['p1','p2'][pi]+'-sk-grid');if(document.getElementById(['p1','p2'][pi]+'-b-secret'))return;
+  const g=document.getElementById(['p1','p2'][pi]+'-sk-grid');
+  if(document.getElementById(['p1','p2'][pi]+'-b-secret'))return;
   const b=document.createElement('button');b.className='sk sk-secret';b.id=['p1','p2'][pi]+'-b-secret';
-  b.innerHTML=`<span class="ico">🔓</span><div class="inf"><div class="nm">SECRET</div><div class="pw">code!</div></div>`;
+  b.innerHTML=`<span class="ico" style="font-size:20px">🔓</span><div class="inf"><div class="nm" style="font-size:13px;letter-spacing:1px">SECRET!</div><div class="pw" style="color:#ff88ff">TAP HERE</div></div>`;
+  // ★ 버튼 탭 → 오버레이 열기
+  b.onclick=()=>{
+    if(currentTurn!==pi||busy)return;
+    if(!P[pi].comboTarget){ startCombo(pi,'secret'); }
+    else { showComboOverlay(pi,'secret'); }
+  };
   g.appendChild(b);
 }
 function rmSecret(){
   ['p1-b-secret','p2-b-secret'].forEach(id=>{const b=document.getElementById(id);if(b)b.remove();});
-  ['p1-dpad','p2-dpad'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
 }
-function startCombo(pi,m){
-  P[pi].comboTarget=m;P[pi].comboBuffer=[];updCombo(pi);
-  // ★ 터치 D-PAD 표시
-  const pid=['p1','p2'][pi];
-  document.getElementById(pid+'-dpad').classList.add('active');
-}
-function stopComboUI(pi){
-  const pid=['p1','p2'][pi];
-  document.getElementById(pid+'-dpad').classList.remove('active');
-}
-function updCombo(pi){
-  const el=document.getElementById(['p1','p2'][pi]+'-combo');el.innerHTML='';
-  if(!P[pi]?.comboTarget){
-    stopComboUI(pi);
-    return;
-  }
-  const seq=P[pi].comboTarget==='ultra'?ULTRA_SEQ:SECRET_SEQ;
-  const ar={left:'←',right:'→',up:'↑',down:'↓'};
-  seq.forEach((k,i)=>{
-    const d=document.createElement('div');d.className='combo-key';
-    const e=P[pi].comboBuffer[i];
-    if(e===k){d.classList.add('hit');d.textContent=ar[k];}
-    else{d.textContent=ar[k];}
-    el.appendChild(d);
-  });
-  const l=document.createElement('span');l.style.cssText='font-size:8px;color:#888;margin-left:4px;font-weight:900;';
-  l.textContent=P[pi].comboTarget==='ultra'?'ULTRA!':'SECRET!';el.appendChild(l);
+/* ★ COMBO OVERLAY SYSTEM ★ */
+let _comboPi = -1; // which player is inputting
+
+function startCombo(pi, m){
+  P[pi].comboTarget = m;
+  P[pi].comboBuffer = [];
+  _comboPi = pi;
+  showComboOverlay(pi, m);
 }
 
-/* ★ 터치 D-PAD 핸들러 */
-function touchDir(pi, dir, el){
-  // 버튼 눌림 피드백
-  el.classList.add('pressed');
-  setTimeout(()=>el.classList.remove('pressed'), 150);
-  // 진동 (지원하는 기기)
-  if(navigator.vibrate) navigator.vibrate(30);
-  SFX.comboBeep();
-  handleCombo(pi, dir);
+function showComboOverlay(pi, m){
+  const overlay = document.getElementById('combo-overlay');
+  const title   = document.getElementById('combo-modal-title');
+  const dpad    = document.getElementById('combo-dpad');
+  const modal   = document.getElementById('combo-modal');
+
+  // title color
+  title.className = 'combo-title ' + (pi===0 ? 'p1t' : 'p2t');
+  title.textContent = pi===0 ? '🔓 P1 SECRET COMBO' : '🔓 P2 SECRET COMBO';
+
+  // dpad class
+  dpad.className = 'dpad-wrap ' + (pi===0 ? 'dpad-p1' : 'dpad-p2');
+
+  // build dpad buttons
+  dpad.innerHTML = `
+    <div class="dpad-row">
+      <div class="dpad-btn empty"></div>
+      <div class="dpad-btn" ontouchstart="touchDir(event,'up')" onmousedown="touchDir(event,'up')">↑</div>
+      <div class="dpad-btn empty"></div>
+    </div>
+    <div class="dpad-row">
+      <div class="dpad-btn" ontouchstart="touchDir(event,'left')" onmousedown="touchDir(event,'left')">←</div>
+      <div class="dpad-btn empty"></div>
+      <div class="dpad-btn" ontouchstart="touchDir(event,'right')" onmousedown="touchDir(event,'right')">→</div>
+    </div>
+    <div class="dpad-row">
+      <div class="dpad-btn empty"></div>
+      <div class="dpad-btn" ontouchstart="touchDir(event,'down')" onmousedown="touchDir(event,'down')">↓</div>
+      <div class="dpad-btn empty"></div>
+    </div>`;
+
+  overlay.classList.add('active');
+  updComboSeq(pi);
 }
-function handleCombo(pi,dir){
-  if(!P[pi]?.comboTarget||currentTurn!==pi)return false;
-  const seq=P[pi].comboTarget==='ultra'?ULTRA_SEQ:SECRET_SEQ;
-  const pos=P[pi].comboBuffer.length;P[pi].comboBuffer.push(dir);updCombo(pi);
-  if(P[pi].comboBuffer[pos]!==seq[pos]){setTimeout(()=>{P[pi].comboBuffer=[];updCombo(pi);},350);return true;}
-  if(P[pi].comboBuffer.length===seq.length){
-    SFX.comboBeep();
-    const m=P[pi].comboTarget;P[pi].comboBuffer=[];P[pi].comboTarget=null;updCombo(pi);
-    if(m==='secret'){setLog(`✅ <span class="hl">SECRET ok!</span> ←→↑← for ULTRA!`);setTimeout(()=>startCombo(pi,'ultra'),500);}
-    else act(pi+1,'ultra');return true;
-  }return true;
+
+function updComboSeq(pi){
+  const el  = document.getElementById('combo-seq-display');
+  el.innerHTML = '';
+  if(!P[pi]?.comboTarget) return;
+  const seq = SECRET_SEQ; // simplified: always same seq
+  const ar  = {left:'←', right:'→', up:'↑', down:'↓'};
+  seq.forEach((k, i) => {
+    const d = document.createElement('div');
+    d.className = 'csd-key';
+    const entered = P[pi].comboBuffer[i];
+    if(entered === k)      { d.classList.add('hit');   d.textContent = ar[k]; }
+    else if(entered !== undefined){ d.classList.add('wrong'); d.textContent = '✕'; }
+    else                   { d.textContent = ar[k]; }
+    el.appendChild(d);
+  });
+}
+
+// Legacy updCombo — no-op now (overlay handles display)
+function updCombo(pi){ updComboSeq(pi); }
+
+function closeComboOverlay(){
+  document.getElementById('combo-overlay').classList.remove('active');
+  _comboPi = -1;
+}
+
+function cancelCombo(){
+  if(_comboPi >= 0){
+    P[_comboPi].comboTarget = null;
+    P[_comboPi].comboBuffer = [];
+  }
+  closeComboOverlay();
+}
+
+function touchDir(e, dir){
+  e.preventDefault();
+  const btn = e.currentTarget;
+  btn.classList.add('pressed');
+  setTimeout(()=>btn.classList.remove('pressed'), 150);
+  if(navigator.vibrate) navigator.vibrate(35);
+  SFX.comboBeep();
+  if(_comboPi >= 0) handleCombo(_comboPi, dir);
+}
+function handleCombo(pi, dir){
+  if(!P[pi]?.comboTarget) return false;
+  const seq = SECRET_SEQ;
+  const pos = P[pi].comboBuffer.length;
+  P[pi].comboBuffer.push(dir);
+  updComboSeq(pi);
+
+  if(P[pi].comboBuffer[pos] !== seq[pos]){
+    // 틀림 → 빨간 표시 후 리셋
+    setTimeout(()=>{
+      P[pi].comboBuffer = [];
+      updComboSeq(pi);
+    }, 400);
+    return true;
+  }
+
+  if(P[pi].comboBuffer.length === seq.length){
+    // ★ 성공! 오버레이 닫고 시크릿 스킬 바로 발동
+    P[pi].comboBuffer = [];
+    P[pi].comboTarget = null;
+    closeComboOverlay();
+    SFX.secretUnlock();
+    setTimeout(()=>doSecret(pi, true), 200); // ultra crit 바로 발동
+  }
+  return true;
 }
 
 function shakeArena(m){
@@ -953,19 +1183,103 @@ function megaFlash(c){
   const f=document.getElementById('flash');
   [c,'#fff',c,'#FFD700','#fff',c].forEach((col,i)=>setTimeout(()=>{f.style.background=col;f.style.opacity=i%2===0?0.6:0.3;if(i===5)setTimeout(()=>f.style.opacity=0,80);},i*70));
 }
-function spawnDmg(dmg,side,big){
-  const a=document.getElementById('arena'),el=document.createElement('div');
-  el.style.cssText=`position:absolute;font-family:'Black Han Sans',sans-serif;pointer-events:none;z-index:60;animation:dmgA 0.9s ease-out forwards;font-size:${big?32:24}px;color:${big?'#FFD700':'#ff6666'};text-shadow:0 0 10px ${big?'#FFD700':'#ff4444'},0 2px 8px rgba(0,0,0,1);left:${side==='right'?'55%':'5%'};top:30%;`;
-  el.textContent='-'+dmg;a.appendChild(el);setTimeout(()=>el.remove(),950);
+function spawnDmg(dmg, side, big, isUltra=false){
+  const a = document.getElementById('arena');
+
+  // ── 메인 숫자 ──
+  const el = document.createElement('div');
+  el.className = 'hp-delta';
+  const leftPos  = side==='right' ? (45 + Math.random()*15)+'%' : (5 + Math.random()*12)+'%';
+  const topPos   = (20 + Math.random()*15) + '%';
+  const sz = isUltra ? 42 : big ? 34 : 24;
+  const col = isUltra ? '#ff44ff' : big ? '#FFD700' : '#ff6666';
+  const glow= isUltra ? '#ff00ff' : big ? '#FFD700' : '#ff4444';
+  el.style.cssText = `left:${leftPos};top:${topPos};font-size:${sz}px;color:${col};
+    text-shadow:0 0 12px ${glow}, 0 2px 8px rgba(0,0,0,0.95);`;
+  el.textContent = '-' + dmg.toLocaleString();
+  a.appendChild(el);
+  setTimeout(()=>el.remove(), 1200);
+
+  // ── 파티클 (스페셜/울트라) ──
+  if(big || isUltra){
+    const hitX = side==='right' ? 68 : 32;
+    const hitY = 55;
+    const colors = isUltra
+      ? ['#ff00ff','#FFD700','#fff','#ff88ff','#ff4400']
+      : ['#FFD700','#FF8C00','#fff','#ffcc00'];
+    const count = isUltra ? 16 : 10;
+    for(let i=0; i<count; i++){
+      const p = document.createElement('div');
+      p.className = 'hit-particle';
+      const angle = (Math.PI*2/count)*i + Math.random()*0.5;
+      const dist  = 40 + Math.random()*60;
+      const tx = Math.cos(angle)*dist;
+      const ty = Math.sin(angle)*dist - 20;
+      const dur = (0.5 + Math.random()*0.4) + 's';
+      p.style.cssText = `left:${hitX}%;top:${hitY}%;
+        background:${colors[i%colors.length]};
+        --tx:${tx}px;--ty:${ty}px;--dur:${dur};
+        box-shadow:0 0 4px ${colors[i%colors.length]};`;
+      a.appendChild(p);
+      setTimeout(()=>p.remove(), 1000);
+    }
+    // 히트 링
+    const ring = document.createElement('div');
+    ring.className = 'hit-ring';
+    ring.style.cssText = `left:${hitX}%;top:${hitY}%;
+      color:${isUltra?'#ff00ff':'#FFD700'};
+      margin-left:-60px;margin-top:-60px;`;
+    a.appendChild(ring);
+    setTimeout(()=>ring.remove(), 600);
+  }
 }
 function spawnSuper(t){
-  const a=document.getElementById('arena'),el=document.createElement('div');el.className='super-badge';el.textContent=t;a.appendChild(el);setTimeout(()=>el.remove(),950);
+  const a=document.getElementById('arena'),el=document.createElement('div');el.className='super-badge';el.textContent=t;a.appendChild(el);setTimeout(()=>el.remove(),1100);
+}
+function spawnAura(side, color){
+  const a = document.getElementById('arena');
+  const el = document.createElement('div');
+  el.className = 'skill-aura';
+  el.style.cssText = `
+    width:80px; height:80px;
+    background:radial-gradient(circle, ${color}cc 0%, ${color}44 50%, transparent 100%);
+    left:${side==='left'?'15%':'60%'}; top:35%;
+    margin-left:-40px; margin-top:-40px;
+  `;
+  a.appendChild(el);
+  setTimeout(()=>el.remove(), 600);
+}
+function spawnUltraFlash(color){
+  const el = document.createElement('div');
+  el.className = 'ultra-flash';
+  el.style.background = `radial-gradient(circle, ${color}99 0%, ${color}44 50%, transparent 100%)`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 700);
 }
 function updateBars(){
   ['p1','p2'].forEach((p,i)=>{
-    const pp=Math.max(0,P[i].hp/P[i].maxHp*100);
-    const b=document.getElementById('h-'+p+'bar');b.style.width=pp+'%';b.className='hud-fill '+(i===0?'p1f':'p2f')+(pp<15?' crit':'');
-    document.getElementById('h-'+p+'hp').textContent=P[i].hp+'/'+P[i].maxHp;
+    if(!P[i]) return;
+    const pp = Math.max(0, P[i].hp / P[i].maxHp * 100);
+    const bar = document.getElementById('h-'+p+'bar');
+    bar.style.width = pp+'%';
+    bar.className = 'hud-fill '+(i===0?'p1f':'p2f')+(pp<15?' crit':'');
+    document.getElementById('h-'+p+'hp').textContent = P[i].hp+'/'+P[i].maxHp;
+
+    // ── 캐릭터 지친 상태 시각화 ──
+    const img = document.getElementById('img-'+(i===0?'p1':'p2'));
+    if(!img) return;
+    // 현재 flip 클래스 보존
+    const isRight = i===1;
+    img.className = 'f-img';
+    if(pp <= 14)      img.classList.add('critical');
+    else if(pp <= 39) img.classList.add('exhausted');
+    else if(pp <= 69) img.classList.add('tired');
+
+    // HP bar 색상도 상태에 따라 변경
+    if(pp <= 14)      bar.style.background = 'linear-gradient(90deg,#ff0000,#ff4400)';
+    else if(pp <= 39) bar.style.background = i===0
+      ? 'linear-gradient(90deg,#ffaa00,#ff6600)'
+      : 'linear-gradient(90deg,#ff6600,#ff4400)';
   });
 }
 function setLog(h){document.getElementById('log').innerHTML=h;}
